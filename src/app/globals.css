@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Noto Sans KR 폰트 불러오기 */
+/* src/app/globals.css 파일 맨 상단에 추가 */
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://gstatic.com) format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 500;
+  src: url(https://gstatic.com) format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 700;
+  src: url(https://gstatic.com) format('truetype');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 900;
+  src: url(https://gstatic.com) format('truetype');
+}
+
+:root {
+  color-scheme: dark;
+}
+
+/* 화면 전체를 여백 없이 가득 채우기 위한 설정 */
+html, body {
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background-color: #020617;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* 제목 및 버튼 스타일 */
+.text-glow {
+  text-shadow: 0 0 12px rgba(253, 224, 71, 0.5);
+}
+
+.btn-cute {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 700;
+  padding: 0.75rem 1.75rem;
+  border-radius: 9999px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-cute:hover {
+  transform: scale(1.05);
+}
+
+.btn-cute:active {
+  transform: scale(0.95);
+}
