@@ -1,149 +1,163 @@
+// src/app/write/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-
-const EMOJI_OPTIONS = ['🌙', '⭐', '🧸', '🦄', '🚀', '🐱', '🏰', '🎈'];
+import { useAuth } from '@/context/AuthContext'; // ⬅️ 기존 홈 화면과 동일한 인증 컨텍스트 사용
+import { supabase } from '@/lib/supabase'; // ⬅️ 설정해두신 Supabase 클라이언트 파일 경로 확인 필수
+import Link from 'next/link';
 
 export default function WritePage() {
+  const { user } = useAuth(); // 로그인된 사용자 정보 가져오기
   const router = useRouter();
 
+  // 입력 폼 상태 관리
   const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
   const [content, setContent] = useState('');
-  const [selectedEmoji, setSelectedEmoji] = useState('🌙');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsSubmitting(true);
+  // 🚨 비로그인 유저 차단막
+  if (!user) {
+    return (
+      <div style={{ textAlign: 'center', padding: '100px 20px', color: '#ffffff' }}>
+        <h2 style={{ color: '#e2b4bd', marginBottom: '20px' }}>🔒 로그인이 필요한 공간입니다</h2>
+        <p style={{ color: '#a0a0b0', marginBottom: '30px' }}>달빛 우체통에 글을 남기려면 먼저 새벽 작가로 등록해 주세요.</p>
+        <Link href="/login" style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          border: '1px solid #fefae0',
+          borderRadius: '20px',
+          padding: '10px 24px',
+          color: '#fefae0',
+          textDecoration: 'none',
+          fontWeight: '600'
+        }}>
+          🔑 로그인 하러 가기
+        </Link>
+      </div>
+    );
+  }
 
-  try {
-    // 1. 현재 로그인된 유저 확인
-    const { data: { user } } = await supabase.auth.getUser();
+  // 🚀 Supabase DB에 글귀 저장 기능
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    if (!user) {
-      alert('로그인이 필요한 서비스입니다!');
-      router.push('/login');
+    if (!title.trim() || !content.trim()) {
+      alert('제목과 내용을 모두 채워주세요. 📝');
       return;
     }
 
-    // 2. Supabase DB에 저장
-    const { data, error } = await supabase
-      .from('stories')
-      .insert([
-        {
-          title,
-          content,
-          author_id: user.id,
-          author_nickname: user.user_metadata?.nickname || '꼬마 작가',
-        },
-      ]);
+    setIsSubmitting(true);
 
-    if (error) throw error;
+    try {
+      // Supabase 'posts' 테이블에 값 집어넣기
+      const { error } = await supabase
+        .from('posts') // ⚠️ 내 Supabase 테이블 이름과 일치하는지 꼭 확인하세요!
+        .insert([
+          {
+            title: title,
+            content: content,
+            user_id: user.id, // 현재 로그인한 유저의 고유 식별값 매칭 (매우 중요)
+          },
+        ]);
 
-    alert('달빛 우체통으로 이야기가 성공적으로 날아갔어요! 🌙');
-    router.push('/library');
-  } catch (error: any) {
-    console.error('글 저장 중 오류 상세:', JSON.stringify(error, null, 2));
-    alert(`이야기를 전송하지 못했어요: ${error?.message || '다시 시도해주세요!'}`);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      if (error) throw error;
+
+      alert('🌙 당신의 소중한 이야기가 밤하늘 서가에 안전하게 저장되었습니다!');
+      
+      // 저장 성공 후 메인 화면이나 도서관 화면으로 부드럽게 튕겨주기
+      router.push('/');
+      router.refresh();
+    } catch (error: any) {
+      console.error('글 저장 실패:', error.message);
+      alert(`저장 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto py-4 sm:py-8 px-2">
-      <div className="text-center mb-8">
-        <span className="text-4xl animate-pulse inline-block mb-2">✍️</span>
-        <h1 className="text-2xl sm:text-3xl font-bold text-moon-yellow text-glow mb-2">
-          꼬마 작가님의 동화 창작실
-        </h1>
-        <p className="text-slate-300 text-sm sm:text-base">
-          마음속에 상상해 둔 멋진 이야기를 달빛 우체통에 담아 전해보세요.
-        </p>
-      </div>
+    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '40px 20px', color: '#ffffff' }}>
+      
+      {/* 뒤로가기 링크 */}
+      <Link href="/" style={{ color: '#e2b4bd', textDecoration: 'none', fontSize: '0.9rem', display: 'inline-block', marginBottom: '20px' }}>
+        ⬅️ 메인 홈으로 돌아가기
+      </Link>
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6"
-      >
-        <div>
-          <label className="block text-sm font-semibold text-slate-200 mb-3">
-            🎨 동화책 대표 표지 고르기
-          </label>
-          <div className="flex flex-wrap gap-3 justify-center bg-slate-950/50 p-4 rounded-2xl border border-white/5">
-            {EMOJI_OPTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => setSelectedEmoji(emoji)}
-                className={`text-3xl p-3 rounded-2xl transition-all transform hover:scale-110 ${
-                  selectedEmoji === emoji
-                    ? 'bg-magic-purple/40 border-2 border-moon-yellow scale-110 shadow-lg shadow-moon-yellow/20'
-                    : 'bg-white/5 hover:bg-white/10 border border-transparent'
-                }`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </div>
+      <h1 style={{ fontSize: '2.2rem', color: '#fefae0', marginBottom: '10px', fontWeight: '800' }}>
+        ✍️ 동화 작가방
+      </h1>
+      <p style={{ color: '#a0a0b0', marginBottom: '40px', fontSize: '1rem' }}>
+        새벽의 숨결을 빌려 마음속 깊은 곳에 숨겨둔 문장들을 하나씩 꺼내어 보세요.
+      </p>
 
-        <div>
-          <label htmlFor="title" className="block text-sm font-semibold text-slate-200 mb-2">
-            📖 동화 제목
-          </label>
+      {/* 글쓰기 입력 폼 박스 */}
+      <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        
+        {/* ① 제목 입력란 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ color: '#e2b4bd', fontWeight: '600' }}>이야기 제목</label>
           <input
-            id="title"
             type="text"
+            placeholder="마음을 대변하는 따뜻한 제목을 달아주세요."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="예: 별빛 마을의 아기 곰"
-            className="w-full px-4 py-3 bg-slate-950/60 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-moon-yellow focus:ring-1 focus:ring-moon-yellow transition-all"
-            maxLength={40}
+            disabled={isSubmitting}
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid rgba(254, 250, 224, 0.3)',
+              background: 'rgba(0, 0, 0, 0.3)',
+              color: '#ffffff',
+              fontSize: '1rem',
+              outline: 'none'
+            }}
           />
         </div>
 
-        <div>
-          <label htmlFor="author" className="block text-sm font-semibold text-slate-200 mb-2">
-            👤 작가 이름 (별명)
-          </label>
-          <input
-            id="author"
-            type="text"
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
-            placeholder="예: 꿈꾸는 토끼"
-            className="w-full px-4 py-3 bg-slate-950/60 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-moon-yellow focus:ring-1 focus:ring-moon-yellow transition-all"
-            maxLength={20}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="content" className="block text-sm font-semibold text-slate-200 mb-2">
-            📝 동화 이야기 내용
-          </label>
+        {/* ② 내용 입력란 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ color: '#e2b4bd', fontWeight: '600' }}>비밀 편지 내용</label>
           <textarea
-            id="content"
-            rows={7}
+            rows={10}
+            placeholder="오늘 밤, 어떤 감정이 당신의 마음을 스쳐 지나갔나요? 자유롭게 적어보세요..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="옛날 옛적 먼 은하수 너머에 작은 아기 곰이 살고 있었어요..."
-            className="w-full px-4 py-3 bg-slate-950/60 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-moon-yellow focus:ring-1 focus:ring-moon-yellow transition-all resize-none leading-relaxed"
+            disabled={isSubmitting}
+            style={{
+              padding: '16px',
+              borderRadius: '8px',
+              border: '1px solid rgba(254, 250, 224, 0.3)',
+              background: 'rgba(0, 0, 0, 0.3)',
+              color: '#ffffff',
+              fontSize: '1rem',
+              lineHeight: '1.6',
+              outline: 'none',
+              resize: 'vertical'
+            }}
           />
         </div>
 
-        <div className="pt-2">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full btn-cute bg-gradient-to-r from-moon-yellow via-amber-400 to-magic-pink text-slate-950 font-extrabold text-lg shadow-xl hover:opacity-95 transition-all disabled:opacity-50"
-          >
-            {isSubmitting ? '달빛 우체통으로 보내는 중... 🚀' : '📮 달빛 우체통에 편지 넣기'}
-          </button>
-        </div>
+        {/* ③ 저장 전송 버튼 */}
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          style={{
+            marginTop: '10px',
+            padding: '16px',
+            borderRadius: '8px',
+            border: 'none',
+            background: isSubmitting ? '#555555' : '#fefae0',
+            color: '#1a1a2e',
+            fontSize: '1.1rem',
+            fontWeight: '700',
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 15px rgba(254, 250, 224, 0.2)',
+            transition: 'all 0.2s'
+          }}
+        >
+          {isSubmitting ? '달빛 집집으로 전달 중...' : '🌙 밤하늘 서가에 저장하기'}
+        </button>
+
       </form>
     </div>
   );
